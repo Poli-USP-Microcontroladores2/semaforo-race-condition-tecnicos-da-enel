@@ -21,7 +21,11 @@ static const struct gpio_dt_spec ledB = GPIO_DT_SPEC_GET(LED_B_NODE, gpios);
 // ----------------------------------------------------
 void thread_A(void *p1, void *p2, void *p3)
 {
+    uint64_t start_ms, end_ms;
+
     while (1) {
+
+        start_ms = k_uptime_get();  // tempo atual em ms
 
         gpio_pin_set_dt(&ledA, 1);  // Liga LED verde
 
@@ -29,9 +33,11 @@ void thread_A(void *p1, void *p2, void *p3)
         for (volatile int i = 0; i < 200000; i++) {}
 
         gpio_pin_set_dt(&ledA, 0);  // Desliga LED verde
-   
-        k_msleep(TEMPO_A_MS);       // Dorme — libera CPU
 
+        end_ms = k_uptime_get();
+        k_msleep(TEMPO_A_MS);       // Dorme — libera CPU
+        
+        printk("Tempo decorrido A: %llu ms\n", end_ms - start_ms);
 
     }
 }
@@ -41,7 +47,10 @@ void thread_A(void *p1, void *p2, void *p3)
 // ----------------------------------------------------
 void thread_B(void *p1, void *p2, void *p3)
 {
+    uint64_t start_ms, end_ms;
+
     while (1) {
+        start_ms = k_uptime_get();
         gpio_pin_set_dt(&ledB, 1);  // Liga LED vermelho
 
         // Simula processamento mais longo 
@@ -52,7 +61,11 @@ void thread_B(void *p1, void *p2, void *p3)
         }
 
         gpio_pin_set_dt(&ledB, 0);  // Desliga LED vermelho
+
+        end_ms = k_uptime_get();
         k_msleep(TEMPO_B_MS);       // Dorme um pouco
+
+        printk("Tempo decorrido B: %llu ms\n", end_ms - start_ms);
     }
 }
 
