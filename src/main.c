@@ -11,10 +11,10 @@ static const struct gpio_dt_spec ledA = GPIO_DT_SPEC_GET(LED_A_NODE, gpios);
 static const struct gpio_dt_spec ledB = GPIO_DT_SPEC_GET(LED_B_NODE, gpios);
 
 // --- Prioridades e tempos ---
-#define PRIO_THREAD_A 5   // Maior prioridade (número menor)
-#define PRIO_THREAD_B 7   // Menor prioridade
-#define TEMPO_A_MS   1500   // Thread A dorme
-#define TEMPO_B_MS   1000   // Thread B dorme
+#define PRIO_THREAD_A 7   // Maior prioridade (número menor)
+#define PRIO_THREAD_B 5   // Menor prioridade
+#define TEMPO_A_MS   900   // Thread A dorme
+#define TEMPO_B_MS   1250   // Thread B dorme
 
 // ----------------------------------------------------
 // THREAD A — Tarefa curta, alta prioridade
@@ -35,9 +35,13 @@ void thread_A(void *p1, void *p2, void *p3)
         gpio_pin_set_dt(&ledA, 0);  // Desliga LED verde
 
         end_ms = k_uptime_get();
+
+        printk("Tempo inicio A: %llu ms\n", start_ms);
+        printk("Tempo final A: %llu ms\n", end_ms);    
+
         k_msleep(TEMPO_A_MS);       // Dorme — libera CPU
         
-        printk("Tempo decorrido A: %llu ms\n", end_ms - start_ms);
+
 
     }
 }
@@ -63,9 +67,12 @@ void thread_B(void *p1, void *p2, void *p3)
         gpio_pin_set_dt(&ledB, 0);  // Desliga LED vermelho
 
         end_ms = k_uptime_get();
+
+        printk("Tempo inicio B: %llu ms\n", start_ms);
+        printk("Tempo final B: %llu ms\n", end_ms); 
+
         k_msleep(TEMPO_B_MS);       // Dorme um pouco
 
-        printk("Tempo decorrido B: %llu ms\n", end_ms - start_ms);
     }
 }
 
