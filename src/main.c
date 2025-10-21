@@ -2,11 +2,14 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/device.h>
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(meu_modulo, LOG_LEVEL_DBG);
 
 // --- Configuração de LEDs via DeviceTree ---
 #define LED_A_NODE DT_ALIAS(led0)  // LED verde
-#define LED_C_NODE DT_ALIAS(led1)  // LED azul
 #define LED_B_NODE DT_ALIAS(led2)  // LED vermelho
+#define LED_C_NODE DT_ALIAS(led1)  // LED azul
 
 #define BUTTON_NODE DT_NODELABEL(user_button_0)
 
@@ -28,7 +31,10 @@ static struct gpio_callback button_cb_data;
 // ----------------------------------------------------
 void thread_A(void *p1, void *p2, void *p3)
 {
+    uint64_t start_ms, end_ms;
+
     while (1) {
+        start_ms = k_uptime_get();
 
         gpio_pin_set_dt(&ledA, 1);  // Liga LED verde
 
@@ -36,10 +42,14 @@ void thread_A(void *p1, void *p2, void *p3)
         for (volatile int i = 0; i < 200000; i++) {}
 
         gpio_pin_set_dt(&ledA, 0);  // Desliga LED verde
-   
+
+        end_ms = k_uptime_get();
+
+        LOG_DBG("Tempo inicial A: %llu ms\n", start_ms);
+        LOG_DBG("Tempo final A: %llu ms\n", end_ms);
+        LOG_DBG("Tempo decorrido A: %llu ms\n", end_ms - start_ms);
+
         k_msleep(TEMPO_A_MS);       // Dorme — libera CPU
-
-
     }
 }
 
@@ -48,7 +58,11 @@ void thread_A(void *p1, void *p2, void *p3)
 // ----------------------------------------------------
 void thread_B(void *p1, void *p2, void *p3)
 {
+    uint64_t start_ms, end_ms;
+
     while (1) {
+        start_ms = k_uptime_get();
+
         gpio_pin_set_dt(&ledB, 1);  // Liga LED vermelho
 
         // Simula processamento mais longo 
@@ -59,6 +73,13 @@ void thread_B(void *p1, void *p2, void *p3)
         }
 
         gpio_pin_set_dt(&ledB, 0);  // Desliga LED vermelho
+
+        end_ms = k_uptime_get();
+
+        LOG_DBG("Tempo inicial B: %llu ms\n", start_ms);
+        LOG_DBG("Tempo final B: %llu ms\n", end_ms);
+        LOG_DBG("Tempo decorrido B: %llu ms\n", end_ms - start_ms);
+
         k_msleep(TEMPO_B_MS);       // Dorme um pouco
     }
 }
@@ -96,9 +117,9 @@ void main(void)
     gpio_init_callback(&button_cb_data, button_isr, BIT(button.pin));
     gpio_add_callback(button.port, &button_cb_data);
 
-    printk("=== Demonstração de Preempção com LEDs ===\n");
-    printk("Thread A (vermelho): prioridade %d\n", PRIO_THREAD_A);
-    printk("Thread B (verde): prioridade %d\n", PRIO_THREAD_B);
+    LOG_INF("=== Demonstracao de Preempcao com LEDs ===\n");
+    LOG_INF("Thread A (verde): prioridade %d\n", PRIO_THREAD_A);
+    LOG_INF("Thread B (vermelho): prioridade %d\n", PRIO_THREAD_B);
 
     while (1) {
         k_sleep(K_FOREVER); // Main dorme para liberar CPU.
