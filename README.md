@@ -34,17 +34,17 @@ Race condition na manipulação de uma variável global
 --------------------------------------------------------
 
 ## Casos de teste:
-# Código do ARTHUR avaliado por Gustavo): 
+# Código do ARTHUR (feito por Arthur): 
 - Pré-condição:
 - Etapas de teste:
 - Pós-condição esperada:
 
-# Código do GUSTAVO (avaliado por Rafael):
+# Código do GUSTAVO (feito por Gustavo):
 - Pré-condição:
 - Etapas de teste:
 - Pós-condição esperada:
 
-# Código do RAFAEL (avaliado por Arthur):
+# Código do RAFAEL (feito por Rafael):
 - Pré-condição:
 - Etapas de teste:
 - Pós-condição esperada:
@@ -52,19 +52,19 @@ Race condition na manipulação de uma variável global
 --------------------------------------------------------
 
 ## Solução:
-# Código do ARTHUR (avaliado por Gustavo): 
+# Código do ARTHUR (feito por Arthur): 
 - [Link Código fonte sem erros]:
 - Mudanças feitas:
 - Resultado após correção:
 - [Link para a print do resultado]:
 
-# Código do GUSTAVO (avaliado por Rafael):
+# Código do GUSTAVO (feito por Gustavo):
 - [Link Código fonte sem erros]:
 - Mudanças feitas:
 - Resultado após correção:
 - [Link para a print do resultado]:
 
-# Código do RAFAEL (avaliado por Arthur):
+# Código do RAFAEL (feito por Rafael):
 - [Link Código fonte sem erros]:
 - Mudanças feitas:
 - Resultado após correção:
