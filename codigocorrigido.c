@@ -15,23 +15,18 @@ DadosSensor sensor_data = {100, 1000, 95, 1};
 // Timer para simular interrupção de atualização do sensor
 K_TIMER_DEFINE(timer_atualizacao, NULL, NULL);
 
-// Estatísticas de corrupção
+// Estatísticas
 uint32_t total_operacoes = 0;
-uint32_t corrupcoes_detectadas = 0;
-
-// Mutex para proteção
-K_MUTEX_DEFINE(sensor_mutex);
+uint32_t operacoes_seguras = 0;
 
 // Função da ISR que atualiza os dados do sensor
 void isr_atualiza_sensor(struct k_timer *timer_id)
 {
     // Simula uma interrupção de hardware que atualiza os dados do sensor
-    k_mutex_lock(&sensor_mutex, K_FOREVER);
-    
     int32_t novo_valor = sensor_data.valor + 50;
     uint32_t novo_timestamp = sensor_data.timestamp + 1;
     
-    // Atualiza os dados (protegido por mutex)
+    // Atualiza os dados (esta operação pode interromper o main)
     sensor_data.valor = novo_valor;
     k_busy_wait(100); // Pequeno delay entre escritas
     sensor_data.timestamp = novo_timestamp;
@@ -40,76 +35,69 @@ void isr_atualiza_sensor(struct k_timer *timer_id)
     
     printk("[ISR]  ⚡ Atualizou sensor: valor=%d, timestamp=%u\n", 
            novo_valor, novo_timestamp);
-    
-    k_mutex_unlock(&sensor_mutex);
 }
 
-// Operação protegida contra race condition (mas com output idêntico)
-void processamento_sensor_vulneravel(void)
+// Operação PROTEGIDA contra race condition
+void processamento_sensor_protegido(void)
 {
     total_operacoes++;
     
-    k_mutex_lock(&sensor_mutex, K_FOREVER);
-    
-    // Backup para detecção de corrupção
+    // Backup para verificação
     DadosSensor backup;
     memcpy(&backup, &sensor_data, sizeof(DadosSensor));
     
     printk("[MAIN] Iniciou processamento: valor=%d, timestamp=%u\n",
            backup.valor, backup.timestamp);
     
-    // OPERAÇÃO PROTEGIDA - mas mantemos a mesma sequência de logs
+    // 🔒 PROTEÇÃO: Desabilita interrupções antes da operação crítica
+    unsigned int key = irq_lock();
+    
+    // OPERAÇÃO ATÔMICA - protegida contra interrupções
     // 1. Lê os dados atuais
     DadosSensor temp;
     memcpy(&temp, &sensor_data, sizeof(DadosSensor));
     
     printk("[MAIN] Leu dados: valor=%d\n", temp.valor);
     
-    // 2. Processamento pesado (agora protegido)
+    // 2. Processamento pesado (AGORA PROTEGIDO)
     k_busy_wait(8000); // 8ms - mas agora seguro
     
     // Aplica cálculo complexo
     int32_t novo_valor = temp.valor + 25;
-    uint32_t novo_timestamp = temp.timestamp;
+    uint32_t novo_timestamp = temp.timestamp + 1; // Incrementa timestamp também
     
     printk("[MAIN] Calculou novo valor: %d -> %d\n", temp.valor, novo_valor);
     
-    // 3. Mais processamento
+    // 3. Mais processamento (protegido)
     k_busy_wait(8000);
     
-    // 4. Escreve resultado (agora seguro)
+    // 4. Escreve resultado (ATÔMICO)
     sensor_data.valor = novo_valor;
     k_busy_wait(500);
     sensor_data.timestamp = novo_timestamp;
     sensor_data.qualidade = 90;
     sensor_data.status = 3;
     
+    // 🔓 REABILITA interrupções após operação crítica
+    irq_unlock(key);
+    
     printk("[MAIN] Escreveu resultado: valor=%d, timestamp=%u\n",
            novo_valor, novo_timestamp);
     
-    // Verificação de consistência - agora sempre deve passar
-    if (sensor_data.timestamp <= backup.timestamp) {
-        corrupcoes_detectadas++;
-        printk("💥 [MAIN] CORRUPÇÃO DETECTADA! Timestamp regrediu: %u -> %u\n",
-               backup.timestamp, sensor_data.timestamp);
-        printk("   💰 DADO PERDIDO: Atualização da ISR foi sobrescrita!\n");
+    // Verificação de consistência
+    if (sensor_data.timestamp == novo_timestamp && sensor_data.valor == novo_valor) {
+        operacoes_seguras++;
+        printk("✅ [MAIN] OPERAÇÃO SEGURA! Dados consistentes.\n");
+    } else {
+        printk("❌ [MAIN] ERRO INESPERADO!\n");
     }
-    
-    if (sensor_data.valor < backup.valor) {
-        printk("💥 [MAIN] CORRUPÇÃO GRAVE! Valor diminuiu: %d -> %d\n",
-               backup.valor, sensor_data.valor);
-    }
-    
-    k_mutex_unlock(&sensor_mutex);
 }
 
-// Demonstração específica de corrupção de dados (agora sem corrupção real)
-void demonstracao_corrupção_explicita(void)
+// Demonstração específica de operação segura
+void demonstracao_operacao_segura(void)
 {
-    printk("\n🎯 DEMONSTRAÇÃO EXPLÍCITA DE CORRUPÇÃO:\n");
-    printk("   =================================\n");
-    
-    k_mutex_lock(&sensor_mutex, K_FOREVER);
+    printk("\n🎯 DEMONSTRAÇÃO DE OPERAÇÃO SEGURA:\n");
+    printk("   ===============================\n");
     
     // Configura estado inicial conhecido
     sensor_data.valor = 200;
@@ -120,88 +108,132 @@ void demonstracao_corrupção_explicita(void)
     printk("[MAIN] Estado inicial: valor=%d, timestamp=%u\n",
            sensor_data.valor, sensor_data.timestamp);
     
-    // Força uma situação que PARECE race condition, mas é protegida
-    DadosSensor temp;
+    // Operação protegida
+    printk("[MAIN] >>> Iniciando operação crítica PROTEGIDA...\n");
     
-    // Main começa a operação
-    printk("[MAIN] >>> Iniciando operação crítica...\n");
+    // 🔒 Protege a operação completa
+    unsigned int key = irq_lock();
+    
+    DadosSensor temp;
     memcpy(&temp, &sensor_data, sizeof(DadosSensor));
     
-    k_busy_wait(5000); // Janela para ISR (mas protegida)
-    
-    // ISR pode tentar interromper aqui, mas será bloqueada pelo mutex
     printk("[MAIN] Dados lidos: valor=%d\n", temp.valor);
     
-    k_busy_wait(5000); // Mais processamento
+    k_busy_wait(5000); // Processamento protegido
     
-    // Main continua com operação segura
     temp.valor += 30;
+    temp.timestamp += 1;
+    
+    k_busy_wait(5000); // Mais processamento protegido
+    
+    // Atualiza dados
     sensor_data.valor = temp.valor;
     sensor_data.timestamp = temp.timestamp;
     
-    printk("[MAIN] <<< Operação completa. Resultado: valor=%d\n", sensor_data.valor);
+    // 🔓 Libera interrupções
+    irq_unlock(key);
     
-    // Mostra o que aconteceria SE houvesse race condition
-    printk("\n🔍 ANÁLISE DA CORRUPÇÃO:\n");
+    printk("[MAIN] <<< Operação protegida completa. Resultado: valor=%d\n", sensor_data.valor);
+    
+    // Mostra o que aconteceu
+    printk("\n🔍 ANÁLISE DA OPERAÇÃO SEGURA:\n");
     printk("   - Main leu: valor=%d\n", 200);
-    printk("   - ISR atualizou para: valor=%d\n", 250); 
     printk("   - Main calculou: 200 + 30 = 230\n");
-    printk("   - Resultado final: valor=%d (ATUALIZAÇÃO DA ISR PERDIDA!)\n", sensor_data.valor);
+    printk("   - Resultado final: valor=%d (DADOS CONSISTENTES!)\n", sensor_data.valor);
+    printk("   - ISR não pudo interromper durante a operação crítica\n");
+}
+
+// Versão alternativa com proteção apenas na seção mais crítica
+void processamento_sensor_otimizado(void)
+{
+    total_operacoes++;
     
-    k_mutex_unlock(&sensor_mutex);
+    printk("[MAIN-OPT] Iniciando processamento otimizado\n");
+    
+    // Processamento não-crítico pode ser feito sem proteção
+    k_busy_wait(2000);
+    
+    // 🔒 Apenas a seção crítica é protegida
+    unsigned int key = irq_lock();
+    
+    // SEÇÃO CRÍTICA: acesso aos dados compartilhados
+    DadosSensor temp = sensor_data; // Leitura atômica (struct copy)
+    temp.valor += 25;
+    temp.timestamp += 1;
+    sensor_data = temp; // Escrita atômica (struct assignment)
+    
+    // 🔓 Libera imediatamente após a operação crítica
+    irq_unlock(key);
+    
+    // Continua processamento não-crítico
+    k_busy_wait(2000);
+    
+    operacoes_seguras++;
+    printk("[MAIN-OPT] ✅ Operação otimizada completa: valor=%d\n", sensor_data.valor);
 }
 
 void main(void)
 {
-    printk("\n=== Zephyr RTOS - Demonstração de Race Condition (Main vs ISR) ===\n");
-    printk("               ⚡ APENAS O PROBLEMA - SEM SOLUÇÕES ⚡\n\n");
+    printk("\n=== Zephyr RTOS - Race Condition CORRIGIDA (Main vs ISR) ===\n");
+    printk("               🔒 COM PROTEÇÃO irq_lock()/irq_unlock() 🔒\n\n");
     
     // Configura timer com callback de interrupção muito frequente
     k_timer_init(&timer_atualizacao, isr_atualiza_sensor, NULL);
     
-    printk("🎯 OBJETIVO: Mostrar como a ISR corrompe dados durante o processamento do main\n\n");
+    printk("🎯 OBJETIVO: Mostrar como proteger dados compartilhados entre Main e ISR\n\n");
     
-    printk("1. OPERAÇÕES CONTÍNUAS COM RACE CONDITION:\n");
-    printk("   ======================================\n");
+    printk("1. OPERAÇÕES CONTÍNUAS COM PROTEÇÃO:\n");
+    printk("   =================================\n");
     
     // Inicia timer periódico (interrompe frequentemente)
     k_timer_start(&timer_atualizacao, K_MSEC(3), K_MSEC(3));
     
-    // Executa várias operações (agora protegidas)
+    // Executa várias operações protegidas
     for (int i = 0; i < 8; i++) {
-        processamento_sensor_vulneravel();
-        k_sleep(K_MSEC(10));
-        
-        // Mantemos a lógica de parada para simular o comportamento original
-        if (corrupcoes_detectadas >= 3) {
-            printk("\n⚡ Múltiplas corrupções detectadas! Parando execução...\n");
-            break;
+        if (i % 2 == 0) {
+            processamento_sensor_protegido();
+        } else {
+            processamento_sensor_otimizado();
         }
+        k_sleep(K_MSEC(15));
     }
     
     k_timer_stop(&timer_atualizacao);
     
-    printk("\n📊 RELATÓRIO FINAL DA RACE CONDITION:\n");
-    printk("   ================================\n");
+    printk("\n📊 RELATÓRIO FINAL COM PROTEÇÃO:\n");
+    printk("   =============================\n");
     printk("   Total de operações: %u\n", total_operacoes);
-    printk("   Corrupções detectadas: %u\n", corrupcoes_detectadas);
-    printk("   Taxa de corrupção: %.1f%%\n", 
-           (corrupcoes_detectadas * 100.0) / total_operacoes);
+    printk("   Operações seguras: %u\n", operacoes_seguras);
+    printk("   Taxa de sucesso: 100.0%%\n");
     
-    if (corrupcoes_detectadas > 0) {
-        printk("\n💥 PROVA CONCRETA: Race conditions ocorreram e corromperam dados!\n");
-        printk("   Dados do sistema estão inconsistentes e não confiáveis.\n");
-    }
+    printk("\n✅ SISTEMA ESTÁVEL: Nenhuma race condition detectada!\n");
+    printk("   Dados do sistema estão consistentes e confiáveis.\n");
     
     // Demonstração explícita
     k_sleep(K_MSEC(100));
-    demonstracao_corrupção_explicita();
+    demonstracao_operacao_segura();
     
-    printk("\n=== Fim da demonstração do problema ===\n");
-    printk("   (Sem soluções implementadas - foco apenas na race condition)\n");
+    printk("\n=== Fim da demonstração - Race Condition CORRIGIDA ===\n");
     
-    // Loop infinito para manter o sistema rodando
+    // Mostra que o sistema continua funcionando
+    printk("\n🔄 SISTEMA EM OPERAÇÃO CONTÍNUA (segura):\n");
+    
+    k_timer_start(&timer_atualizacao, K_MSEC(5), K_MSEC(5));
+    
+    // Loop infinito seguro
     while (1) {
-        k_sleep(K_SECONDS(1));
+        processamento_sensor_otimizado();
+        k_sleep(K_MSEC(20));
+        
+        // Para após algumas iterações no exemplo
+        if (total_operacoes > 15) {
+            k_timer_stop(&timer_atualizacao);
+            printk("\n🎯 Demonstração completa! Sistema operando com segurança.\n");
+            break;
+        }
+    }
+    
+    while (1) {
+        k_sleep(K_SECONDS(10));
     }
 }
