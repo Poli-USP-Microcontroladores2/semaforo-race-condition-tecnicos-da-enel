@@ -1,60 +1,49 @@
 # PSI-Microcontroladores2-Aula06
 Atividade: Resolução de Race Condition com Semáforo
 
-## 🎯 Objetivos da Atividade
-Nesta atividade, os alunos deverão:
-- Retomar o código gerado por IA em atividade anterior que apresenta **condições de corrida (race conditions)**.
-- Trabalhar em **duplas ou trios**, com **avaliação cruzada interna** entre os integrantes do grupo.
-- Aplicar **testes estruturados** com pré-condição, etapas de teste e pós-condição.
-- Demonstrar como o problema de concorrência foi **identificado e resolvido** com uso de semáforo.
+## Revisão do código:
+# Código do GUSTAVO (avaliado por Rafael):
+# - [Link Código fonte com erros]: 
+https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/gustavo/src/main.c
+# - Comportamento incorreto: 
+	-- Pelos LOGs Apresentados pelo sistema, o valor esperado, que era de 1.000.000 nunca era alcançado, sempre ficando aleatorizado entre valores maiores que 100.000 e menores que 1.000.000, isso ocorre por conta da race condition que ocorre nas linhas 54 e 75, onde as threads A e B tentam manipular o contador ao mesmo tempo e ocorre que sobrescrevem o valor aficionado pela outra thread, dessa forma, resultando em um saldo final menor que o o saldo esperado.
+# - Momento do erro:
+	-- O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro das threads A e B.
 
-## 🧠 Etapas da Atividade
+--------------------------------------------------------
 
-### **1️⃣ Revisão do Código Anterior**
-- Cada integrante do grupo deverá **executar o código do colega** que contém a race condition original.
-- Documentar:
-  - O comportamento incorreto observado.
-  - O momento em que o erro ocorre (condição específica, sequência de eventos, etc.).
+## Casos de teste:
+# Código do Rafael (feito por Rafael): 
+- Pré-condição: 
+	Serial monitor com Baud Rate de 11500, arquivo platformio.ini inserido no projeto, arquivo prj.conf inserido no projeto, conteúdo do arquivo códigoORIGINAL.c colado dentro do arquivo main.c do projeto 
+- Etapas de teste: 
+	Compilar e fazer upload do código para uma placa FRDM-KL25Z
+- Pós-condição esperada: 
+	 O timestamp regride de vez em quando, o que indica a ISR sobrescrita
 
-### **2️⃣ Planejamento de Testes**
-Para cada cenário, descreva **três casos de teste** seguindo o formato abaixo:
+--------------------------------------------------------
 
-| Caso de Teste | Pré-condição | Etapas de Teste | Pós-condição Esperada |
-|----------------|---------------|------------------|------------------------|
-| 1 | ... | ... | ... |
-| 2 | ... | ... | ... |
-| 3 | ... | ... | ... |
+## Solução:
+# Código do Rafael (feito por Rafael): 
+- [Link Código fonte sem erros]: 
+https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/Rafael/codigocorrigido.c
+-Mudanças feitas:
+-- Proteção com irq_lock()/irq_unlock(): Foi implementado o uso de irq_lock() e irq_unlock() para proteger as seções críticas onde os dados do sensor são acessados.
+-- Inicialização: Não foi necessária inicialização adicional, pois irq_lock()/irq_unlock() são funções nativas do Zephyr para controle de interrupções.
+-- Proteção de Seção Crítica (Main): Nas funções processamento_sensor_protegido() e processamento_sensor_otimizado(), adicionei irq_lock() antes de acessar a variável sensor_data e irq_unlock() somente após completar a escrita do novo valor. Isso encapsula toda a operação de leitura-processamento-escrita, impedindo que a ISR interrompa no meio do processamento.
+-- Proteção da Demonstração: Adicionei o par irq_lock()/irq_unlock() também na função demonstracao_operacao_segura() para garantir operações atômicas durante a demonstração explícita.
+-Resultado após correção:
+-- A "Race Condition" (Condição de Corrida) foi eliminada. Não haverá mais "Data Corruption" (corrupção de dados).
+-- Antes: Main lia valor=100, ISR interrompia e atualizava para 150, Main continuava com valor antigo (100), calculava 125 e sobrescrevia a atualização da ISR.
+-- Agora: Main chama irq_lock(), lê valor=100 e processa. ISR tenta interromper mas fica bloqueada. Main calcula 100 + 25 = 125, escreve 125 e chama irq_unlock(). Só então a ISR pode executar e atualizar para 175.
+-- Log esperado: A sequência de valores do sensor será sempre consistente e as operações mostrarão "OPERAÇÃO SEGURA! Dados consistentes", sem corrupções detectadas.
+- [Link para a print do resultado]: 
+https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/arthur/CONFIRMA%C3%87%C3%83O%20QUE%20DEU%20CERTO.png
 
-### **3️⃣ Correção e Reteste**
-- Corrigir o código para **eliminar a race condition**.
-- Reexecutar **os mesmos casos de teste** e registrar:
-  - As mudanças feitas.
-  - O resultado após a correção com evidências (capturas de tela por exemplo).
+--------------------------------------------------------
 
-### **4️⃣ Avaliação Interna (entre colegas do mesmo grupo)**
-Cada integrante deverá:
-1. Executar o código original do colega conforme os testes planejados.
-2. Executar o código corrigido do colega conforme os testes planejados.
-3. Conferir se as condições de corrida foram eliminadas.  
-4. Registrar uma **avaliação curta** (pode ser no final do README):
-   - O que estava errado antes.  
-   - O que mudou com a correção.
-   - Se o comportamento agora é estável.  
-
-## 📦 Entregáveis
-
-No repositório do grupo, incluir:
-1. `README.md` (este arquivo) contendo:
-   - Nome dos integrantes.
-   - Cenário escolhido.
-   - Casos de teste.
-   - Descrição da race condition e da solução.
-   - Avaliação de cada colega.
-2. Código-fonte organizado (considerando um código original e um corrigido por cada integrante):
-   - `codigo_original/`
-   - `codigo_corrigido/`
-3. Evidências (prints, logs, vídeos curtos, etc.) da execução dos testes.
-
----
-
-**Repositório:** entregue via GitHub Classroom (um repositório por grupo) e um PDF do markdown final no Moodle.
+## Avaliação curta:
+# Código do Gustavo (avaliado por Rafael):
+- O que estava errado antes:  
+- O que mudou com a correção:
+- Se o comportamento agora é estável: 
