@@ -15,16 +15,15 @@ LOG_MODULE_REGISTER(CHECAR_JANTAR, LOG_LEVEL_INF);
 volatile int jantar = 0;
 
 // Thread IDs
-static k_tid_t chloe_tid, david_tid, verificador_tid;
+static k_tid_t chloe_tid, david_tid;
 
 // Declarações das threads
-static struct k_thread chloe_thread, david_thread, verificador_thread;
+static struct k_thread chloe_thread, david_thread;
 
 // Stack das threads
 #define STACK_SIZE 1024
 K_THREAD_STACK_DEFINE(chloe_stack, STACK_SIZE);
 K_THREAD_STACK_DEFINE(david_stack, STACK_SIZE);
-K_THREAD_STACK_DEFINE(verificador_stack, STACK_SIZE);
 
 // Função do chefe Chloe
 void chefe_chloe(void *arg1, void *arg2, void *arg3)
@@ -72,25 +71,6 @@ void chefe_david(void *arg1, void *arg2, void *arg3)
     }
 }
 
-// Função que verifica o estado do jantar
-void verificador_jantar(void *arg1, void *arg2, void *arg3)
-{
-    ARG_UNUSED(arg1);
-    ARG_UNUSED(arg2);
-    ARG_UNUSED(arg3);
-    
-    while (1) {
-        k_sleep(K_SECONDS(1.7));
-        
-        // Verifica se o jantar está no ponto (par) ou cru (ímpar)
-        if (jantar % 2 == 0) {
-            LOG_INF("=== JANTAR NO PONTO! Valor: %d (par) ===", jantar);
-        } else {
-            LOG_ERR("=== JANTAR CRU! Valor: %d (ímpar) ===", jantar);
-        }
-    }
-}
-
 void main(void)
 {
     LOG_INF("Iniciando preparo do jantar...");
@@ -113,16 +93,6 @@ void main(void)
         chefe_david,
         NULL, NULL, NULL,
         5, 0, K_NO_WAIT
-    );
-    
-    // Cria a thread do verificador
-    verificador_tid = k_thread_create(
-        &verificador_thread,
-        verificador_stack,
-        K_THREAD_STACK_SIZEOF(verificador_stack),
-        verificador_jantar,
-        NULL, NULL, NULL,
-        4, 0, K_NO_WAIT
     );
     
     LOG_INF("Todas as threads foram criadas!");
