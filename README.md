@@ -17,28 +17,28 @@ Race condition na manipulação de uma variável global
 
 ## Revisão do código:
 ### Código do ARTHUR (avaliado por Gustavo): 
-- [Link Código fonte com erros]:
-- 		https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/arthur/codigoORIGINAL.c
-- Comportamento incorreto:
-- 		Foi observado um problema clássico de Lost Update: "Uma segunda transação escreve um segundo valor de um item de dados (dado) sobre o primeiro valor escrito por uma primeira transação concorrente, e o primeiro valor é perdido para outras transações em execução concorrente que precisam, por precedência, ler o primeiro valor. As transações que leram o valor errado terminam com resultados incorretos." fonte: https://en.wikipedia.org/wiki/Concurrency_control. Portanto, no nosso contexto, uma thread lê um valor da variável, é interrompida por um k_sleep, a próxima thread lê o mesmo valor, terminando com ambas imprimindo um valor repetido. 
-- Momento do erro:
-- 		O erro ocorre no intervalo de tempo entre a leitura e a escrita. O comando k_sleep permite que a segunda thread leia o valor da variável jantar antes que a primeira thread tenha terminado de atualizá-la.
+* [Link Código fonte com erros]:
+- https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/arthur/codigoORIGINAL.c
+* Comportamento incorreto:
+- Foi observado um problema clássico de Lost Update: "Uma segunda transação escreve um segundo valor de um item de dados (dado) sobre o primeiro valor escrito por uma primeira transação concorrente, e o primeiro valor é perdido para outras transações em execução concorrente que precisam, por precedência, ler o primeiro valor. As transações que leram o valor errado terminam com resultados incorretos." fonte: https://en.wikipedia.org/wiki/Concurrency_control. Portanto, no nosso contexto, uma thread lê um valor da variável, é interrompida por um k_sleep, a próxima thread lê o mesmo valor, terminando com ambas imprimindo um valor repetido. 
+* Momento do erro:
+- O erro ocorre no intervalo de tempo entre a leitura e a escrita. O comando k_sleep permite que a segunda thread leia o valor da variável jantar antes que a primeira thread tenha terminado de atualizá-la.
 
 ### Código do GUSTAVO (avaliado por Rafael):
-- [Link Código fonte com erros]:
+* [Link Código fonte com erros]:
 - 		https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/gustavo/src/c%C3%B3digoOriginal.c
-- Comportamento incorreto:
-- 		Pelos LOGs Apresentados pelo sistema, o valor esperado, que era de 1.000.000 nunca era alcançado, sempre ficando aleatorizado entre valores maiores que 100.000 e menores que 1.000.000, isso ocorre por conta da race condition que ocorre nas linhas 54 e 75, onde as threads A e B tentam manipular o contador ao mesmo tempo e ocorre que sobrescrevem o valor aficionado pela outra thread, dessa forma, resultando em um saldo final menor que o o saldo esperado.
-# - Momento do erro:
-		Na hora de incrementar o valor, caso ambas as threads tentem fazer ao mesmo tempo. O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro das threads A e B.
+* Comportamento incorreto:
+- Pelos LOGs Apresentados pelo sistema, o valor esperado, que era de 1.000.000 nunca era alcançado, sempre ficando aleatorizado entre valores maiores que 100.000 e menores que 1.000.000, isso ocorre por conta da race condition que ocorre nas linhas 54 e 75, onde as threads A e B tentam manipular o contador ao mesmo tempo e ocorre que sobrescrevem o valor aficionado pela outra thread, dessa forma, resultando em um saldo final menor que o o saldo esperado.
+* Momento do erro:
+- Na hora de incrementar o valor, caso ambas as threads tentem fazer ao mesmo tempo. O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro das threads A e B.
 
 ### Código do RAFAEL (avaliado por Arthur):
-- [Link Código fonte com erros]:
-- 		https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/Rafael/codigoORIGINAL.c
-- Comportamento incorreto:
-- 		Ocorre uma "Sobrescrita de Dados" (Lost Update) devido a uma Condição de Corrida (Race Condition). A função main lê os dados do sensor para uma variável temporária, processa essa cópia, e depois salva o resultado de volta na variável global. O comportamento incorreto é que, enquanto a main estava ocupada processando a cópia antiga, a interrupção (ISR) atualizou a variável global com dados novos e reais do hardware. Quando a main finalmente escreve o seu resultado, ela ignora e apaga a atualização feita pela ISR, fazendo com que o sistema perca dados recentes e o estado do sensor "volte no tempo" (inconsistência). Exemplo do log: A ISR atualizou o valor para 250, mas a Main (que tinha lido 200 antes) calculou 230 e salvou 230 por cima, perdendo a leitura de 250.
-- Momento do erro:
-- 		O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro da função processamento_sensor_vulneravel (ou na demonstracao_corrupcao_explicita). Especificamente, o problema se manifesta no intervalo de tempo entre: A Leitura: memcpy(&temp, &sensor_data, ...) (Linha 55 e 116); A Escrita: sensor_data.valor = novo_valor; (Linha 73 e 126). Durante os atrasos (k_busy_wait) que existem entre essas duas linhas, a ISR é disparada e altera a memória global. Como a main não bloqueou o acesso (usando semáforos, mutex ou desabilitando interrupções), ela opera com uma "foto" velha da memória e, ao salvar, descarta o trabalho da ISR.
+* [Link Código fonte com erros]:
+- https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/Rafael/codigoORIGINAL.c
+* Comportamento incorreto:
+- Ocorre uma "Sobrescrita de Dados" (Lost Update) devido a uma Condição de Corrida (Race Condition). A função main lê os dados do sensor para uma variável temporária, processa essa cópia, e depois salva o resultado de volta na variável global. O comportamento incorreto é que, enquanto a main estava ocupada processando a cópia antiga, a interrupção (ISR) atualizou a variável global com dados novos e reais do hardware. Quando a main finalmente escreve o seu resultado, ela ignora e apaga a atualização feita pela ISR, fazendo com que o sistema perca dados recentes e o estado do sensor "volte no tempo" (inconsistência). Exemplo do log: A ISR atualizou o valor para 250, mas a Main (que tinha lido 200 antes) calculou 230 e salvou 230 por cima, perdendo a leitura de 250.
+* Momento do erro:
+- O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro da função processamento_sensor_vulneravel (ou na demonstracao_corrupcao_explicita). Especificamente, o problema se manifesta no intervalo de tempo entre: A Leitura: memcpy(&temp, &sensor_data, ...) (Linha 55 e 116); A Escrita: sensor_data.valor = novo_valor; (Linha 73 e 126). Durante os atrasos (k_busy_wait) que existem entre essas duas linhas, a ISR é disparada e altera a memória global. Como a main não bloqueou o acesso (usando semáforos, mutex ou desabilitando interrupções), ela opera com uma "foto" velha da memória e, ao salvar, descarta o trabalho da ISR.
 
 --------------------------------------------------------
 
