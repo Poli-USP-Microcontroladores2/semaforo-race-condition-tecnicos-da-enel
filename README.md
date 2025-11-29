@@ -16,48 +16,42 @@ Race condition na manipulação de uma variável global
 --------------------------------------------------------
 
 ## Revisão do código:
-# Código do ARTHUR (avaliado por Gustavo): 
+### Código do ARTHUR (avaliado por Gustavo): 
 - [Link Código fonte com erros]:
-https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/arthur/codigoORIGINAL.c
+- 		https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/arthur/codigoORIGINAL.c
 - Comportamento incorreto:
-  Foi observado um problema clássico de Lost Update: "Uma segunda transação escreve um segundo valor de um item de dados (dado) sobre o primeiro valor escrito por uma primeira transação concorrente, e o primeiro valor é perdido para outras transações em execução concorrente que precisam, por precedência, ler o primeiro valor. As transações que leram o valor errado terminam com resultados incorretos." fonte: https://en.wikipedia.org/wiki/Concurrency_control. Portanto, no nosso contexto, uma thread lê um valor da variável, é interrompida por um k_sleep, a próxima thread lê o mesmo valor, terminando com ambas imprimindo um valor repetido. 
+- 		Foi observado um problema clássico de Lost Update: "Uma segunda transação escreve um segundo valor de um item de dados (dado) sobre o primeiro valor escrito por uma primeira transação concorrente, e o primeiro valor é perdido para outras transações em execução concorrente que precisam, por precedência, ler o primeiro valor. As transações que leram o valor errado terminam com resultados incorretos." fonte: https://en.wikipedia.org/wiki/Concurrency_control. Portanto, no nosso contexto, uma thread lê um valor da variável, é interrompida por um k_sleep, a próxima thread lê o mesmo valor, terminando com ambas imprimindo um valor repetido. 
 - Momento do erro:
-  O erro ocorre no intervalo de tempo entre a leitura e a escrita. O comando k_sleep permite que a segunda thread leia o valor da variável jantar antes que a primeira thread tenha terminado de atualizá-la.
+- 		O erro ocorre no intervalo de tempo entre a leitura e a escrita. O comando k_sleep permite que a segunda thread leia o valor da variável jantar antes que a primeira thread tenha terminado de atualizá-la.
 
-# Código do GUSTAVO (avaliado por Rafael):
-# - [Link Código fonte com erros]: 
-https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/gustavo/src/c%C3%B3digoOriginal.c
-# - Comportamento incorreto: 
-  Pelos LOGs Apresentados pelo sistema, o valor esperado, que era de 1.000.000 nunca era alcançado, sempre ficando aleatorizado entre valores maiores que 100.000 e menores que 1.000.000, isso ocorre por conta da race condition que ocorre nas linhas 54 e 75, onde as threads A e B tentam manipular o contador ao mesmo tempo e ocorre que sobrescrevem o valor aficionado pela outra thread, dessa forma, resultando em um saldo final menor que o o saldo esperado.
+### Código do GUSTAVO (avaliado por Rafael):
+- [Link Código fonte com erros]:
+- 		https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/gustavo/src/c%C3%B3digoOriginal.c
+- Comportamento incorreto:
+- 		Pelos LOGs Apresentados pelo sistema, o valor esperado, que era de 1.000.000 nunca era alcançado, sempre ficando aleatorizado entre valores maiores que 100.000 e menores que 1.000.000, isso ocorre por conta da race condition que ocorre nas linhas 54 e 75, onde as threads A e B tentam manipular o contador ao mesmo tempo e ocorre que sobrescrevem o valor aficionado pela outra thread, dessa forma, resultando em um saldo final menor que o o saldo esperado.
 # - Momento do erro:
-  Na hora de incrementar o valor, caso ambas as threads tentem fazer ao mesmo tempo.
-  O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro das threads A e B.
+		Na hora de incrementar o valor, caso ambas as threads tentem fazer ao mesmo tempo. O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro das threads A e B.
 
-# Código do RAFAEL (avaliado por Arthur):
-# - [Link Código fonte com erros]: 
-https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/Rafael/codigoORIGINAL.c
-# - Comportamento incorreto: 
-  Ocorre uma "Sobrescrita de Dados" (Lost Update) devido a uma Condição de Corrida (Race Condition). A função main lê os dados do sensor para uma variável temporária, processa essa cópia, e depois salva o resultado de volta na variável global. O comportamento incorreto é que, enquanto a main estava ocupada processando a cópia antiga, a interrupção (ISR) atualizou a variável global com dados novos e reais do hardware. Quando a main finalmente escreve o seu resultado, ela ignora e apaga a atualização feita pela ISR, fazendo com que o sistema perca dados recentes e o estado do sensor "volte no tempo" (inconsistência).
-	Exemplo do log: A ISR atualizou o valor para 250, mas a Main (que tinha lido 200 antes) calculou 230 e salvou 230 por cima, perdendo a leitura de 250.
-# - Momento do erro:
-  O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro da função processamento_sensor_vulneravel (ou na demonstracao_corrupcao_explicita).
-	Especificamente, o problema se manifesta no intervalo de tempo entre:
-    - A Leitura: memcpy(&temp, &sensor_data, ...) (Linha 55 e 116)
-    - A Escrita: sensor_data.valor = novo_valor; (Linha 73 e 126)
-	Durante os atrasos (k_busy_wait) que existem entre essas duas linhas, a ISR é disparada e altera a memória global. Como a main não bloqueou o acesso (usando semáforos, mutex ou desabilitando interrupções), ela opera com uma "foto" velha da memória e, ao salvar, descarta o trabalho da ISR.
+### Código do RAFAEL (avaliado por Arthur):
+- [Link Código fonte com erros]:
+- 		https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/Rafael/codigoORIGINAL.c
+- Comportamento incorreto:
+- 		Ocorre uma "Sobrescrita de Dados" (Lost Update) devido a uma Condição de Corrida (Race Condition). A função main lê os dados do sensor para uma variável temporária, processa essa cópia, e depois salva o resultado de volta na variável global. O comportamento incorreto é que, enquanto a main estava ocupada processando a cópia antiga, a interrupção (ISR) atualizou a variável global com dados novos e reais do hardware. Quando a main finalmente escreve o seu resultado, ela ignora e apaga a atualização feita pela ISR, fazendo com que o sistema perca dados recentes e o estado do sensor "volte no tempo" (inconsistência). Exemplo do log: A ISR atualizou o valor para 250, mas a Main (que tinha lido 200 antes) calculou 230 e salvou 230 por cima, perdendo a leitura de 250.
+- Momento do erro:
+- 		O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro da função processamento_sensor_vulneravel (ou na demonstracao_corrupcao_explicita). Especificamente, o problema se manifesta no intervalo de tempo entre: A Leitura: memcpy(&temp, &sensor_data, ...) (Linha 55 e 116); A Escrita: sensor_data.valor = novo_valor; (Linha 73 e 126). Durante os atrasos (k_busy_wait) que existem entre essas duas linhas, a ISR é disparada e altera a memória global. Como a main não bloqueou o acesso (usando semáforos, mutex ou desabilitando interrupções), ela opera com uma "foto" velha da memória e, ao salvar, descarta o trabalho da ISR.
 
 --------------------------------------------------------
 
 ## Casos de teste:
-# Código do ARTHUR (feito por Arthur): 
-- Pré-condição: 
-	 Serial monitor com Baud Rate de 115200, arquivo platformio.ini inserido no projeto, arquivo prj.conf inserido no projeto, conteúdo do arquivo códigoORIGINAL.c colado dentro do arquivo main.c do projeto 
-- Etapas de teste: 
-	 Compilar e fazer upload do código para uma placa FRDM-KL25Z
-- Pós-condição esperada: 
-	 De vez em quando, o valor da variável "jantar" repete números, o que significa que ocorreu race condition
+### Código do ARTHUR (feito por Arthur): 
+- Pré-condição:
+- 		Serial monitor com Baud Rate de 115200, arquivo platformio.ini inserido no projeto, arquivo prj.conf inserido no projeto, conteúdo do arquivo códigoORIGINAL.c colado dentro do arquivo main.c do projeto 
+- Etapas de teste:
+- 		Compilar e fazer upload do código para uma placa FRDM-KL25Z
+- Pós-condição esperada:
+- 		De vez em quando, o valor da variável "jantar" repete números, o que significa que ocorreu race condition
 
-# Código do GUSTAVO (feito por Gustavo):
+### Código do GUSTAVO (feito por Gustavo):
 - Pré-condição:
   Placa FRDM-KL25Z conectada ao computador, com o código gravado na placa. Serial Monitor aberto em 115200 de baud rate, exibindo: 
 <inf> race_condition_demo: === Demonstracao de RACE CONDITION ===
@@ -68,7 +62,7 @@ https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos
 - Pós-condição esperada:
   Deve ser exibido no serial monitor: <inf> race_condition_demo: Valor Real: 1000000
 
-# Código do RAFAEL (feito por Rafael):
+### Código do RAFAEL (feito por Rafael):
 - Pré-condição: 
 	Serial monitor com Baud Rate de 11500, arquivo platformio.ini inserido no projeto, arquivo prj.conf inserido no projeto, conteúdo do arquivo códigoORIGINAL.c colado dentro do arquivo main.c do projeto 
 - Etapas de teste: 
@@ -79,7 +73,7 @@ https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos
 --------------------------------------------------------
 
 ## Solução:
-# Código do ARTHUR (feito por Arthur): 
+### Código do ARTHUR (feito por Arthur): 
 - [Link Código fonte sem erros]: 
 https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/arthur/codigoCORRIGIDO.c
 - Mudanças feitas:
@@ -95,7 +89,7 @@ https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos
 - [Link para a print do resultado]: 
 https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/arthur/CONFIRMA%C3%87%C3%83O%20QUE%20DEU%20CERTO.png
 
-# Código do GUSTAVO (feito por Gustavo):
+### Código do GUSTAVO (feito por Gustavo):
 - [Link Código fonte sem erros]:
 https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/gustavo/src/c%C3%B3digoCorrigido.c
 - Mudanças feitas:
@@ -105,7 +99,7 @@ https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos
 - [Link para a print do resultado]:
 https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/gustavo/print.png
 
-# Código do RAFAEL (feito por Rafael):
+### Código do RAFAEL (feito por Rafael):
 - [Link Código fonte sem erros]: 
 https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/Rafael/codigocorrigido.c
 -Mudanças feitas:
@@ -124,30 +118,28 @@ https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos
 --------------------------------------------------------
 
 ## Avaliação curta:
-# Código do ARTHUR (avaliado por Gustavo): 
+### Código do ARTHUR (avaliado por Gustavo): 
 - O que estava errado antes:
-    A instrução k_sleep estava no meio do processo da atualização da variável jantar, forçando troca de threads enquanto a variável ainda estava sendo manipulada. Isso fazia com que ambas as threads lessem o mesmo valor e incrementassem para o mesmo valor, repetindo números.
+- 		A instrução k_sleep estava no meio do processo da atualização da variável jantar, forçando troca de threads enquanto a variável ainda estava sendo manipulada. Isso fazia com que ambas as threads lessem o mesmo valor e incrementassem para o mesmo valor, repetindo números.
 - O que mudou com a correção:
-    Foi implementado um semáforo binário, então uma thread vai processar a variável até o fim quando pegar o semáforo, enquanto a outra thread espera, garantindo a resolução para o problema anterior. 
+- 		Foi implementado um semáforo binário, então uma thread vai processar a variável até o fim quando pegar o semáforo, enquanto a outra thread espera, garantindo a resolução para o problema anterior. 
 - Se o comportamento agora é estável:
-    Sim, nenhuma thread consegue ler a variável jantar enquanto a outra estiver no processo de modificação, garantindo integridade dos dados.   
+- 		Sim, nenhuma thread consegue ler a variável jantar enquanto a outra estiver no processo de modificação, garantindo integridade dos dados.   
 
-# Código do GUSTAVO (avaliado por Rafael):
+### Código do GUSTAVO (avaliado por Rafael):
 - O que estava errado antes:
-  A proteção fraca no valor do saldo a ser incrementado fazia com que ambas as threads tivessem a capacidade de incrementar o valor do saldo, porem com ocorrências de sobrescritas.
+- 		A proteção fraca no valor do saldo a ser incrementado fazia com que ambas as threads tivessem a capacidade de incrementar o valor do saldo, porem com ocorrências de sobrescritas.
 - O que mudou com a correção:
-  Foi adicionado um mutex, fazendo assim o incremento na variavel global ser seguro
+- 		Foi adicionado um mutex, fazendo assim o incremento na variavel global ser seguro
 - Se o comportamento agora é estável:
-  Agora os incrementos possuem uma parede de segurança proporcionada pelo mutex, assim, este momento delicado do codigo é assegurado, portanto, sim, o código agora é estavel.
+- 		Agora os incrementos possuem uma parede de segurança proporcionada pelo mutex, assim, este momento delicado do codigo é assegurado, portanto, sim, o código agora é estavel.
 
-
-## Avaliação curta:
-# Código do RAFAEL (avaliado por Arthur):
+### Código do RAFAEL (avaliado por Arthur):
 - O que estava errado antes:
-	Ocorria uma condição de corrida no padrão Read-Modify-Write. A ISR preemptava a Main Thread dentro da "janela de vulnerabilidade" (após a leitura dos dados, mas antes da escrita). Isso causava um Lost Update (atualização perdida): a Main Thread sobrescrevia os dados novos gerados pela ISR com resultados baseados em dados obsoletos.  
+- 		Ocorria uma condição de corrida no padrão Read-Modify-Write. A ISR preemptava a Main Thread dentro da "janela de vulnerabilidade" (após a leitura dos dados, mas antes da escrita). Isso causava um Lost Update (atualização perdida): a Main Thread sobrescrevia os dados novos gerados pela ISR com resultados baseados em dados obsoletos.  
 - O que mudou com a correção:
-	Implementou-se uma Seção Crítica via mascaramento de interrupções (irq_lock). Isso transformou a manipulação dos dados compartilhados em uma operação atômica. Enquanto a Main Thread está na seção crítica, o escalonador e o hardware de interrupção são bloqueados, garantindo acesso exclusivo à memória.
-- Se o comportamento agora é estável: 
-	A proteção assegura a Integridade Referencial: não é mais possível ler o estado do sistema pela metade ou corrompido. Então sim, o comportamento agora é estável.
+- 		Implementou-se uma Seção Crítica via mascaramento de interrupções (irq_lock). Isso transformou a manipulação dos dados compartilhados em uma operação atômica. Enquanto a Main Thread está na seção crítica, o escalonador e o hardware de interrupção são bloqueados, garantindo acesso exclusivo à memória.
+- Se o comportamento agora é estável:
+- 		A proteção assegura a Integridade Referencial: não é mais possível ler o estado do sistema pela metade ou corrompido. Então sim, o comportamento agora é estável.
 
 
