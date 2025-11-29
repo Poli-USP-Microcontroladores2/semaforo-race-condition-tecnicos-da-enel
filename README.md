@@ -18,6 +18,7 @@ Race condition na manipulação de uma variável global
 ## Revisão do código:
 ### Código do ARTHUR (avaliado por Gustavo): 
 * [Link Código fonte com erros]:
+** asldjflasjdfl 
 - https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/arthur/codigoORIGINAL.c
 * Comportamento incorreto:
 - Foi observado um problema clássico de Lost Update: "Uma segunda transação escreve um segundo valor de um item de dados (dado) sobre o primeiro valor escrito por uma primeira transação concorrente, e o primeiro valor é perdido para outras transações em execução concorrente que precisam, por precedência, ler o primeiro valor. As transações que leram o valor errado terminam com resultados incorretos." fonte: https://en.wikipedia.org/wiki/Concurrency_control. Portanto, no nosso contexto, uma thread lê um valor da variável, é interrompida por um k_sleep, a próxima thread lê o mesmo valor, terminando com ambas imprimindo um valor repetido. 
