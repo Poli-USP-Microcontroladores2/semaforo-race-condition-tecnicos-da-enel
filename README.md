@@ -4,10 +4,11 @@ Atividade: Resolução de Race Condition com Semáforo
 ## Revisão do código:
 # Código do GUSTAVO (avaliado por Rafael):
 # - [Link Código fonte com erros]: 
-https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/gustavo/src/main.c
+https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos-da-enel/blob/gustavo/src/c%C3%B3digoOriginal.c
 # - Comportamento incorreto: 
 - 	 Pelos LOGs Apresentados pelo sistema, o valor esperado, que era de 1.000.000 nunca era alcançado, sempre ficando aleatorizado entre valores maiores que 100.000 e menores que 1.000.000, isso ocorre por conta da race condition que ocorre nas linhas 54 e 75, onde as threads A e B tentam manipular o contador ao mesmo tempo e ocorre que sobrescrevem o valor aficionado pela outra thread, dessa forma, resultando em um saldo final menor que o o saldo esperado.
 # - Momento do erro:
+- 	na hora de incrementar o valor, caso ambas as threads tentem fazer ao mesmo tempo.
 - 	O erro acontece durante a sequência de Leitura-Modificação-Escrita (Read-Modify-Write) não atômica dentro das threads A e B.
 
 --------------------------------------------------------
@@ -44,6 +45,6 @@ https://github.com/Poli-USP-Microcontroladores2/semaforo-race-condition-tecnicos
 
 ## Avaliação curta:
 # Código do Gustavo (avaliado por Rafael):
-- O que estava errado antes:  
-- O que mudou com a correção:
-- Se o comportamento agora é estável: 
+- O que estava errado antes:  A proteção fraca no valor do saldo a ser incrementado fazia com que ambas as threads tivessem a capacidade de incrementar o valor do saldo, porem com ocorrências de sobrescritas.
+- O que mudou com a correção: Foi adicionado um mutex, fazendo assim o incremento na variavel global ser seguro
+- Se o comportamento agora é estável: Agora os incrementos possuem uma parede de segurança proporcionada pelo mutex, assim, este momento delicado do codigo é assegurado, portanto, sim, o código agora é estavel.
